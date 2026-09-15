@@ -1,0 +1,46 @@
+
+Sistema operativo
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+Editores
+
+.vscode/
+.idea/
+*.swp
+*~
+
+Node
+
+node_modules/
+npm-debug.log*
+
+Python
+
+pycache/
+*.py[cod]
+venv/
+.venv/
+
+Backups locales
+
+index.html.backup*
+index.html.BASE-LIMPIA*
+index.html.POST-PRESENTACION*
+.zip
+README.md.backup
+
+Archivos temporales
+
+*.log
+*.tmp
+
+Claves y secretos
+
+.env
+.env.local
+*.key
+*.pem
+secrets.json

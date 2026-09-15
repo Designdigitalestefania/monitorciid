@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Test CIID</title>
+<style>
+  body { background: #0e1116; color: #fff; font-family: monospace; padding: 20px; }
+  .ok { color: #7ee787; }
+  .err { color: #ff7b72; }
+  .warn { color: #ffa657; }
+  h1 { font-size: 16px; }
+  #resultado { font-size: 13px; line-height: 1.8; margin-top: 20px; }
+</style>
+</head>
+<body>
+<h1>Diagnóstico MONITOR CIID</h1>
+<div id="resultado">Cargando…</div>
+
+<script>
+window.addEventListener("error", function(e) {
+  var r = document.getElementById("resultado");
+  r.innerHTML += "<div class='err'>❌ ERROR: " + e.message + " (línea " + e.lineno + ")</div>";
+});
+
+setTimeout(function() {
+  var r = document.getElementById("resultado");
+  r.innerHTML = "";
+
+  // 1. Verificar funciones del modo presentación
+  var checks = [
+    ["iniciarPresentacion", typeof iniciarPresentacion === "function"],
+    ["detenerPresentacion", typeof detenerPresentacion === "function"],
+    ["toggleVoz", typeof toggleVoz === "function"],
+    ["toggleGuion", typeof toggleGuion === "function"],
+    ["GUION_PRESENTACION", typeof GUION_PRESENTACION !== "undefined"],
+    ["ESTADOS", typeof ESTADOS !== "undefined"],
+    ["demo2", typeof demo2 !== "undefined"],
+    ["actualizar", typeof actualizar === "function"],
+    ["renderStageDemo2", typeof renderStageDemo2 === "function"]
+  ];
+
+  checks.forEach(function(c) {
+    var cls = c[1] ? "ok" : "err";
+    var icon = c[1] ? "✓" : "✗";
+    r.innerHTML += "<div class='" + cls + "'>" + icon + " " + c[0] + "</div>";
+  });
+
+  // 2. Verificar botón
+  var btn = document.getElementById("btnIniciarPresentacion");
+  r.innerHTML += "<div class='warn'>--- Botón ---</div>";
+  if (btn) {
+    r.innerHTML += "<div class='ok'>✓ El botón existe en el DOM</div>";
+    r.innerHTML += "<div class='ok'>  ID: " + btn.id + "</div>";
+    r.innerHTML += "<div class='ok'>  Visible: " + (btn.offsetParent !== null) + "</div>";
+  } else {
+    r.innerHTML += "<div class='err'>✗ El botón NO está en el DOM</div>";
+  }
+}, 2000);
+</script>
+</body>
+</html>

@@ -1740,25 +1740,6 @@ document.addEventListener("keydown", function(e) {
   }
 });
 
-
-/* Registrar el evento del botón de presentación */
-(function() {
-  function conectar() {
-    var btn = document.getElementById("btnIniciarPresentacion");
-    if (btn && typeof iniciarPresentacion === "function") {
-      btn.addEventListener("click", iniciarPresentacion);
-      console.log("[CIID] Botón de presentación conectado");
-    } else {
-      setTimeout(conectar, 100);
-    }
-  }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", conectar);
-  } else {
-    conectar();
-  }
-})();
-
 </script>
 
 </body>

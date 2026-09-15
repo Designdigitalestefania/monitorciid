@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1c2230"/>
+      <stop offset="1" stop-color="#0b0e13"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#g)"/>
+  <g stroke="#2a3140" stroke-width="1">
+    <line x1="0" y1="150" x2="800" y2="150"/>
+    <line x1="0" y1="300" x2="800" y2="300"/>
+    <line x1="200" y1="0" x2="200" y2="450"/>
+    <line x1="400" y1="0" x2="400" y2="450"/>
+    <line x1="600" y1="0" x2="600" y2="450"/>
+  </g>
+  <text x="400" y="195" font-family="sans-serif" font-size="24" fill="#8b949e" text-anchor="middle">Contexto territorial de la comunidad</text>
+  <text x="400" y="260" font-family="sans-serif" font-size="72" font-weight="700" fill="#4c8bf5" text-anchor="middle" opacity="0.35">DEMO</text>
+  <text x="400" y="300" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">Contenido ficticio · MONITOR CIID</text>
+</svg>

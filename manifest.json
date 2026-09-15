@@ -1,0 +1,9 @@
+{
+  "name": "MONITOR CIID · Demo",
+  "short_name": "CIID",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0e1116",
+  "theme_color": "#0e1116",
+  "icons": []
+}

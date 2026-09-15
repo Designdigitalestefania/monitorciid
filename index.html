@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MONITOR CIID · Pipeline en vivo</title>
+<link rel="icon" href="assets/logo-ciid-mini.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0e1116">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1c2230;
+    --border: #2a3140;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #4c8bf5;
+    --accent-2: #0a4fff;
+    --ok: #2ea043;
+    --warn: #d29922;
+    --err: #f85149;
+    --patrimonio: #a371f7;
+    --live: #ff5c8a;
+    --oro: #b08d57;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  header {
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand img { width: 48px; height: 48px; }
+  .brand h1 { margin: 0; font-size: 16px; letter-spacing: 1px; }
+  .brand .sub { font-size: 10.5px; color: var(--muted); margin-top: 2px; max-width: 620px; }
+  header .right { display: flex; align-items: center; gap: 10px; }
+  header .tag {
+    font-size: 10px; background: var(--err);
+    padding: 3px 8px; border-radius: 4px;
+    letter-spacing: 1px; font-weight: 700;
+  }
+  header .live {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--live);
+    letter-spacing: 1px; font-weight: 700;
+  }
+  header .live::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--live);
+    box-shadow: 0 0 0 0 rgba(255,92,138,.7);
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255,92,138,.7); }
+    70% { box-shadow: 0 0 0 10px rgba(255,92,138,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,92,138,0); }
+  }
+  .tabs {
+    display: flex; gap: 4px; padding: 10px 24px 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    position: sticky; top: 73px; z-index: 9;
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 10px 16px;
+    border: 1px solid transparent; border-bottom: none;
+    background: transparent; color: var(--muted);
+    cursor: pointer; border-radius: 6px 6px 0 0;
+    font-size: 13px; white-space: nowrap;
+  }
+  .tab.active {
+    background: var(--bg); color: var(--text);
+    border-color: var(--border);
+    border-bottom: 1px solid var(--bg);
+    margin-bottom: -1px;
+  }
+  main { padding: 16px; max-width: 1700px; margin: 0 auto; }
+  .grid {
+    display: grid;
+    grid-template-columns: 260px 1fr 320px;
+    gap: 14px; align-items: start;
+  }
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .panel h2 {
+    margin: 0 0 10px; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--muted);
+  }
+
+  .pipeline { display: flex; flex-direction: column; gap: 4px; }
+  .step {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    cursor: pointer; font-size: 12px;
+    transition: all .15s;
+  }
+  .step:hover { border-color: var(--accent); }
+  .step.active { border-color: var(--accent); background: #1a2740; }
+  .step.done { border-color: rgba(46,160,67,.4); }
+  .step.done .dot { background: var(--ok); }
+  .step.pending { opacity: .45; }
+  .step.processing { border-color: var(--live); background: #241a22; }
+  .step.processing .dot { background: var(--live); animation: pulse 1s infinite; }
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--muted); flex-shrink: 0;
+  }
+  .step.active .dot { background: var(--accent); box-shadow: 0 0 0 4px rgba(76,139,245,.2); }
+  .step .spin {
+    margin-left: auto; width: 12px; height: 12px;
+    border: 2px solid var(--live); border-top-color: transparent;
+    border-radius: 50%; animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .stage-title {
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .stage-body {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    min-height: 420px;
+  }
+  .meta-row {
+    display: flex; justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 13px; gap: 12px;
+  }
+  .meta-row:last-child { border-bottom: none; }
+  .meta-row .k { color: var(--muted); flex-shrink: 0; }
+  .meta-row .v { text-align: right; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 8px; border-radius: 4px;
+    font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; font-weight: 700;
+  }
+  .badge.ok { background: rgba(46,160,67,.15); color: var(--ok); }
+  .badge.warn { background: rgba(210,153,34,.15); color: var(--warn); }
+  .badge.err { background: rgba(248,81,73,.15); color: var(--err); }
+  .badge.info { background: rgba(76,139,245,.15); color: var(--accent); }
+  .badge.patrimonio { background: rgba(163,113,247,.15); color: var(--patrimonio); }
+  .badge.live { background: rgba(255,92,138,.15); color: var(--live); }
+
+  .actor {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; padding: 3px 9px; border-radius: 12px;
+    background: rgba(255,255,255,.05);
+    margin-right: 6px; margin-bottom: 6px;
+  }
+
+  .btn {
+    background: var(--accent); color: white;
+    border: none; padding: 10px 16px;
+    border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 600;
+    margin-right: 8px; margin-top: 12px;
+    transition: all .15s;
+  }
+  .btn.secondary { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); }
+  .btn.danger { background: var(--err); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+
+  .expediente { font-size: 13px; }
+  .expediente .item { padding: 7px 0; border-bottom: 1px dashed var(--border); }
+  .expediente .item:last-child { border-bottom: none; }
+  .expediente .label {
+    color: var(--muted); font-size: 10px;
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 2px;
+  }
+
+  .audio-box {
+    background: #0b0e13; border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; color: var(--muted);
+    flex-wrap: wrap;
+  }
+  .audio-wave { display: flex; gap: 2px; align-items: center; height: 24px; }
+  .audio-wave span {
+    display: block; width: 2px; background: var(--patrimonio);
+    border-radius: 2px; animation: wave 1.4s ease-in-out infinite;
+  }
+  .audio-wave span:nth-child(1){height:8px;animation-delay:0s}
+  .audio-wave span:nth-child(2){height:18px;animation-delay:.1s}
+  .audio-wave span:nth-child(3){height:12px;animation-delay:.2s}
+  .audio-wave span:nth-child(4){height:22px;animation-delay:.3s}
+  .audio-wave span:nth-child(5){height:10px;animation-delay:.4s}
+  .audio-wave span:nth-child(6){height:16px;animation-delay:.5s}
+  @keyframes wave { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.6)} }
+
+  .media-card {
+    background: #0b0e13; border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .media-card img, .media-card svg {
+    width: 100%; height: 140px;
+    object-fit: cover; display: block;
+  }
+  .media-card img[src*="card"] {
+    height: auto !important;
+    max-height: 460px;
+    object-fit: contain;
+    background: #0b0e13;
+  }
+  .media-caption {
+    padding: 6px 10px; font-size: 11px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+
+  .nota-generada {
+    background: #ffffff; color: #1a1a1a;
+    border-radius: 10px; padding: 22px;
+    margin-top: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.4);
+    font-family: Georgia, serif;
+  }
+  .nota-generada .kicker {
+    font-family: -apple-system, sans-serif;
+    font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: #c0392b;
+    font-weight: 700; margin-bottom: 6px;
+  }
+  .nota-generada h3 {
+    margin: 0 0 12px; font-size: 22px;
+    line-height: 1.25; color: #0e1116;
+  }
+  .nota-generada .sumario {
+    font-size: 15px; color: #444;
+    border-left: 3px solid #c0392b;
+    padding-left: 12px; margin-bottom: 16px;
+    font-style: italic;
+  }
+  .nota-generada .cuerpo p {
+    margin: 0 0 12px; font-size: 15px; line-height: 1.65;
+  }
+  .nota-generada .firma {
+    font-family: -apple-system, sans-serif;
+    font-size: 11px; color: #888;
+    margin-top: 16px; padding-top: 12px;
+    border-top: 1px solid #eee;
+  }
+  .nota-generada .lang-tag {
+    display: inline-block;
+    font-family: -apple-system, sans-serif;
+    font-size: 10px; letter-spacing: 1px;
+    background: #f3e8ff; color: #6b21a8;
+    padding: 3px 8px; border-radius: 4px;
+    margin-bottom: 10px;
+  }
+
+  /* Versión en lengua originaria */
+  .nota-lengua {
+    background: #0b0e13;
+    border: 1px solid var(--patrimonio);
+    border-radius: 10px;
+    padding: 22px;
+    box-shadow: 0 4px 20px rgba(163,113,247,.15);
+    font-family: Georgia, serif;
+    color: #e6edf3;
+    position: relative;
+    margin-top: 12px;
+  }
+  .nota-lengua::before {
+    content: "DIIDXA' STI' BINNIGOLA'SA · DEMO";
+    position: absolute; top: -10px; left: 20px;
+    background: var(--patrimonio); color: #ffffff;
+    font-family: -apple-system, sans-serif;
+    font-size: 9px; font-weight: 800;
+    letter-spacing: 2px; padding: 3px 10px;
+    border-radius: 4px;
+  }
+  .nota-lengua .lang-tag {
+    display: inline-block;
+    font-family: -apple-system, sans-serif;
+    font-size: 10px; letter-spacing: 1px;
+    background: rgba(163,113,247,.2); color: var(--patrimonio);
+    padding: 3px 8px; border-radius: 4px;
+    margin-bottom: 10px; font-weight: 700;
+  }
+  .nota-lengua .kicker {
+    font-family: -apple-system, sans-serif;
+    font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--patrimonio);
+    font-weight: 700; margin-bottom: 6px;
+  }
+  .nota-lengua h3 {
+    margin: 0 0 12px; font-size: 22px;
+    line-height: 1.3; color: #ffffff; font-style: italic;
+  }
+  .nota-lengua .sumario {
+    font-size: 15px; color: #c8b6e8;
+    border-left: 3px solid var(--patrimonio);
+    padding-left: 12px; margin-bottom: 16px;
+    font-style: italic;
+  }
+  .nota-lengua .cuerpo p {
+    margin: 0 0 12px; font-size: 15px; line-height: 1.65;
+    color: #e6edf3;
+  }
+  .nota-lengua .firma {
+    font-family: -apple-system, sans-serif;
+    font-size: 11px; color: #a371f7;
+    margin-top: 16px; padding-top: 12px;
+    border-top: 1px solid rgba(163,113,247,.3);
+  }
+  .lang-aviso {
+    margin-top: 12px; padding: 8px 12px;
+    background: rgba(255,92,138,.08);
+    border-left: 3px solid var(--live);
+    border-radius: 6px;
+    font-family: -apple-system, sans-serif;
+    font-size: 11px; color: #ffb3cb;
+    line-height: 1.5;
+  }
+  .lang-aviso strong { color: var(--live); }
+
+  .bilingue-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px; margin-top: 12px;
+  }
+  @media (max-width: 900px) {
+    .bilingue-wrap { grid-template-columns: 1fr; }
+  }
+
+  .lang-toggle {
+    display: flex; gap: 6px; margin: 10px 0;
+    flex-wrap: wrap;
+  }
+  .lang-toggle button {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 6px; cursor: pointer;
+    font-size: 12px;
+  }
+  .lang-toggle button.active {
+    background: var(--patrimonio);
+    border-color: var(--patrimonio);
+    color: white; font-weight: 700;
+  }
+
+  .formatos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px; margin-top: 12px;
+  }
+  .formato-card {
+    background: #0b0e13; border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; font-size: 12px;
+  }
+  .formato-card .head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px; font-weight: 600;
+    color: var(--accent); font-size: 12px;
+  }
+  .formato-card .body {
+    color: var(--muted); font-size: 11px;
+    line-height: 1.5; max-height: 120px; overflow: hidden;
+  }
+
+  .live-log {
+    background: #05070a; border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px; color: #7ee787;
+    max-height: 170px; overflow-y: auto;
+    margin-top: 12px;
+  }
+  .live-log .line { margin-bottom: 3px; }
+  .live-log .ts { color: #6e7681; }
+  .live-log .ok { color: #7ee787; }
+  .live-log .info { color: #79c0ff; }
+  .live-log .warn { color: #ffa657; }
+  .live-log .patrimonio { color: #d2a8ff; }
+  .live-log .err { color: #ff7b72; }
+
+  .typing::after {
+    content: "▊"; color: var(--accent);
+    animation: blink .8s infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .qr-block { text-align: center; margin-bottom: 20px; padding: 22px; }
+  .qr-block img { width: 220px; height: 220px; background: white; padding: 12px; border-radius: 12px; }
+  .qr-fallback {
+    padding: 40px; color: var(--muted); font-size: 12px;
+    background: #0b0e13; border: 1px dashed var(--border);
+    border-radius: 12px; display: inline-block;
+  }
+  .qr-fallback code {
+    background: #161b22; padding: 2px 6px;
+    border-radius: 4px; font-size: 11px;
+  }
+
+  .comparativa table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .comparativa th, .comparativa td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+  .comparativa th {
+    color: var(--muted); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .comparativa .yes { color: var(--ok); font-weight: 600; }
+  .comparativa .no { color: var(--muted); }
+  .comparativa .patrimonio-row { background: rgba(163,113,247,.06); }
+
+  .cierre {
+    margin-top: 20px; text-align: center;
+    padding: 32px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: linear-gradient(180deg, var(--panel), var(--bg));
+  }
+  .cierre img { width: 260px; margin-bottom: 16px; }
+  .cierre h2 { font-size: 22px; letter-spacing: 3px; margin: 0 0 8px; }
+  .cierre p { color: var(--muted); margin: 4px 0; }
+  .cierre .grande { font-size: 16px; color: var(--text); margin: 16px 0; }
+  .cierre .oro { color: var(--oro); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <img src="assets/logo-ciid-mini.svg" alt="MONITOR CIID">
+    <div>
+      <h1>MONITOR CIID <span style="color:var(--muted); font-weight:400; font-size:12px;">· pipeline en vivo</span></h1>
+      <div class="sub">Centro Inteligente de Información Digital · Todos los contenidos, voces, imágenes y datos son ficticios. Uso exclusivo de demostración.</div>
+    </div>
+  </div>
+  <div class="right">
+    <span class="live">EN VIVO</span>
+    <span class="tag">DEMO</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-view="demo1">Demo 1 · Institucional</button>
+  <button class="tab" data-view="demo2">Demo 2 · Ciudadana + Lengua</button>
+  <button class="tab" data-view="comparativa">Comparativa final</button>
+</div>
+
+<main>
+
+  <section id="view-demo1">
+    <div class="grid">
+      <aside class="panel">
+        <h2>Pipeline CIID</h2>
+        <div class="pipeline" id="pipeline1"></div>
+      </aside>
+      <section class="panel">
+        <div class="stage-title">
+          <span id="stage-title1">Estado actual</span>
+          <span id="stage-clock1" style="color:var(--live); font-family:ui-monospace,monospace;"></span>
+        </div>
+        <div class="stage-body" id="stage-body1"></div>
+        <div id="stage-actions1"></div>
+      </section>
+      <aside class="panel">
+        <h2>Expediente</h2>
+        <div class="expediente" id="expediente1"></div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="view-demo2" style="display:none;">
+    <div class="grid">
+      <aside class="panel">
+        <h2>Pipeline CIID</h2>
+        <div class="pipeline" id="pipeline2"></div>
+      </aside>
+      <section class="panel">
+        <div class="stage-title">
+          <span id="stage-title2">Estado actual</span>
+          <span id="stage-clock2" style="color:var(--live); font-family:ui-monospace,monospace;"></span>
+        </div>
+        <div class="stage-body" id="stage-body2"></div>
+        <div id="stage-actions2"></div>
+      </section>
+      <aside class="panel">
+        <h2>Expediente</h2>
+        <div class="expediente" id="expediente2"></div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="view-comparativa" style="display:none;">
+    <div class="qr-block panel">
+      <h2>Abre esta demo en tu celular</h2>
+      <img src="assets/qr-demo.png" alt="QR demo"
+           onerror="this.outerHTML='<div class=\'qr-fallback\'>Coloca aquí <code>assets/qr-demo.png</code><br><br>Genera con:<br><code>qrencode -o assets/qr-demo.png -s 10 -m 2 &quot;TU_URL&quot;</code></div>'">
+      <p style="color:var(--muted); font-size:13px; margin-top:12px;">
+        Escanea para navegar el piloto completo desde tu teléfono.
+      </p>
+    </div>
+
+    <div class="panel comparativa">
+      <h2>Resultado del ecosistema</h2>
+      <table>
+        <thead>
+          <tr><th>Etapa</th><th>Demo 1 · Institucional</th><th>Demo 2 · Ciudadana + Lengua</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Ingesta</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Normalización</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Clasificación</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Asistencia editorial</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Verificación</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Decisión humana</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Distribución multiformato</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Métricas</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Participación ciudadana</td><td class="no">—</td><td class="yes">✓</td></tr>
+          <tr><td>Lengua originaria</td><td class="no">—</td><td class="yes">✓</td></tr>
+          <tr><td>Validación lingüística</td><td class="no">—</td><td class="yes">✓</td></tr>
+          <tr class="patrimonio-row"><td>Preservación patrimonial</td><td class="no">—</td><td class="yes" style="color:var(--patrimonio);">✓ Archivo vivo</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cierre">
+      <img src="assets/logo-ciid.svg" alt="MONITOR CIID">
+      <h2>MONITOR CIID</h2>
+      <p class="grande">La tecnología asiste. <span class="oro">El periodista decide.</span></p>
+      <p>Innovar para informar. Digitalizar para preservar.</p>
+      <p style="margin-top:16px; letter-spacing:2px;">De Oaxaca para el mundo. 🌎</p>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const ESTADOS = ["RECEIVED","PROCESSING","CLASSIFIED","EDITORIAL_REVIEW","VERIFICATION","DECISION","PUBLISHED","PRESERVED"];
+const LABELS = {
+  RECEIVED: "Ingesta",
+  PROCESSING: "Normalización",
+  CLASSIFIED: "Clasificación",
+  EDITORIAL_REVIEW: "Asistencia editorial",
+  VERIFICATION: "Verificación",
+  DECISION: "Decisión periodística",
+  PUBLISHED: "Publicación",
+  PRESERVED: "Preservación"
+};
+
+/* ============ DEMO 1 ============ */
+const demo1 = {
+  entrada: "El Ayuntamiento de Oaxaca de Juárez informó sobre el inicio de trabajos de una obra vial que busca mejorar la movilidad en una zona de alta circulación vehicular.",
+  estado: 0,
+  expediente: {
+    "Municipio": "Oaxaca de Juárez",
+    "Estado": "Oaxaca",
+    "Tema": "Infraestructura / movilidad",
+    "Tipo": "Información institucional",
+    "Fuente primaria": "Ayuntamiento",
+    "Canal": "Comunicado oficial",
+    "ID único": "CIID-2026-0001"
+  },
+  clasificacion: {
+    "Categoría": "Infraestructura",
+    "Subcategoría": "Obra pública",
+    "Territorio": "Oaxaca de Juárez",
+    "Actores": "Ayuntamiento / autoridades municipales",
+    "Impacto": "Movilidad urbana",
+    "Prioridad": "Alta",
+    "Confianza": "87%"
+  },
+  nota: {
+    kicker: "OAXACA · INFRAESTRUCTURA",
+    titular: "Arranca obra vial en Oaxaca de Juárez para mejorar movilidad en zona de alta circulación",
+    sumario: "El Ayuntamiento capitalino confirmó el inicio de trabajos en una de las vialidades con mayor flujo vehicular. La obra busca reducir tiempos de traslado y ordenar el tránsito en la zona.",
+    cuerpo: [
+      "El Ayuntamiento de Oaxaca de Juárez confirmó el inicio de los trabajos de una obra vial que, de acuerdo con la información institucional, busca mejorar la movilidad en una zona de alta circulación vehicular de la capital.",
+      "De acuerdo con el comunicado oficial, los trabajos contemplan intervención en la superficie de rodamiento y adecuación de pasos peatonales. La autoridad municipal señaló que la obra responde a un diagnóstico previo sobre puntos críticos de congestión.",
+      "Hasta el momento no se ha precisado el monto total de la inversión ni el plazo exacto de conclusión. Monitor CIID solicitó a la autoridad municipal la ficha técnica y el calendario de ejecución para completar la información.",
+      "La zona intervenida concentra tránsito vehicular y actividad comercial, por lo que se prevé un operativo de vialidad alterna durante el desarrollo de los trabajos."
+    ],
+    firma: "Redacción Monitor Noticias · Verificado por mesa editorial"
+  },
+  verificacion: [
+    { q: "¿Existe documento oficial?", a: "Sí", estado: "ok" },
+    { q: "¿La obra efectivamente inició?", a: "Parcial · verificado en sitio", estado: "warn" },
+    { q: "¿Dónde se encuentra?", a: "Zona centro-sur, precisada", estado: "ok" },
+    { q: "¿Avance reportado?", a: "Sin cifra oficial", estado: "warn" },
+    { q: "¿Autoridad que informa?", a: "Ayuntamiento de Oaxaca de Juárez", estado: "ok" }
+  ],
+  formatos: {
+    "Sitio web": "Titular: Arranca obra vial en Oaxaca de Juárez para mejorar movilidad…<br>Formato: nota larga con foto e hipervínculos internos.",
+    "Facebook": "🛣️ Arranca obra vial en Oaxaca de Juárez<br>La intervención busca mejorar la movilidad en una zona de alta circulación.<br>📌 Vía: Ayuntamiento capitalino<br>#Oaxaca #Infraestructura #Movilidad",
+    "Instagram": "Obra vial en marcha en el corazón de Oaxaca de Juárez. 🚧<br>Una intervención pensada para reducir tiempos de traslado.<br>#OaxacaCapital #ObraPública",
+    "X (Twitter)": "🚧 Arranca obra vial en Oaxaca de Juárez para mejorar la movilidad en zona de alta circulación. Vía @AyuntamientoOax.<br>Detalles 👉 monitorciid.mx",
+    "YouTube (descripción)": "La capital oaxaqueña inicia trabajos de infraestructura vial. En este video te explicamos en 90 segundos qué contempla la obra y qué falta por confirmar.",
+    "Formato breve (WhatsApp)": "🚧 Oaxaca de Juárez inicia obra vial en zona de alta circulación.<br>Busca mejorar movilidad.<br>Vía: Ayuntamiento.<br>👉 Más en monitorciid.mx"
+  },
+  preservacion: {
+    "Contenido original": "Preservado íntegro",
+    "Fuente primaria": "Comunicado oficial (2026)",
+    "Versión publicada": "v1.0",
+    "Evidencia de verificación": "Ficha técnica + verificación en sitio",
+    "Modificaciones": "Ninguna posterior a publicación",
+    "Hash documental": "sha256:7f3a…d91c"
+  }
+};
+
+/* ============ DEMO 2 ============ */
+const demo2 = {
+  entrada: "«En nuestra comunidad ya no se escucha la información de las autoridades en nuestra lengua. Queremos saber qué está pasando con el camino y cuándo comenzarán los trabajos.»",
+  estado: 0,
+  expediente: {
+    "Origen": "Ciudadanía",
+    "Canal": "WhatsApp",
+    "Formato": "Texto + audio + fotografía",
+    "Territorio": "Comunidad de la Sierra Norte (demo)",
+    "Lengua": "Zapoteco (variante por confirmar)",
+    "Tipo": "Reporte ciudadano",
+    "ID único": "CIID-2026-0002",
+    "Consentimiento": "Registrado · uso informativo y patrimonial"
+  },
+  clasificacion: {
+    "Tema": "Infraestructura / camino comunitario",
+    "Territorio": "Sierra Norte · Oaxaca",
+    "Tipo": "Reporte ciudadano",
+    "Lengua detectada": "Zapoteco (probable)",
+    "Prioridad": "Alta",
+    "Sensibilidad": "Patrimonio lingüístico",
+    "Confianza": "79%"
+  },
+  nota: {
+    kicker: "SIERRA NORTE · COMUNIDAD · LENGUA ORIGINARIA",
+    titular: "Comunidad de la Sierra Norte reporta falta de información oficial sobre obra del camino, en su propia lengua",
+    sumario: "Habitantes de una comunidad zapoteca enviaron a Monitor CIID un reporte en su lengua originaria. Señalan que la información oficial sobre el camino no llega en su idioma y piden claridad sobre el inicio de los trabajos.",
+    cuerpo: [
+      "A través de un mensaje de WhatsApp, un integrante de una comunidad zapoteca de la Sierra Norte envió a Monitor CIID un reporte en su lengua originaria acompañado de una fotografía y un audio. En el mensaje pide saber qué está pasando con el camino y cuándo comenzarán los trabajos.",
+      "El reporte, marcado como información ciudadana, activó el protocolo de verificación del ecosistema CIID. El contenido no se publicó de manera automática: fue contrastado con autoridades municipales y con la dependencia responsable de la obra, y sometido a validación lingüística por hablantes nativos de la variante correspondiente.",
+      "De acuerdo con la información recabada, existe un proyecto registrado para la rehabilitación del camino, pero la comunidad no ha recibido la información en su lengua. El hallazgo apunta a una brecha de comunicación institucional más que a la ausencia del proyecto.",
+      "El audio original en lengua originaria fue preservado como registro patrimonial vivo. La versión publicada conserva el sentido, el contexto y la expresión comunitaria. No es solo una traducción: es una versión validada por hablantes nativos."
+    ],
+    firma: "Redacción Monitor Noticias · Validación lingüística: colaborador hablante de la variante local",
+    lengua: {
+      nombre: "Zapoteco (variante demo)",
+      aviso: "Versión lingüística ficticia para demostración. No corresponde a una variante real.",
+      kicker: "GUIBA' NISADÓ · GUIDXI · DIIDXA' STI' BINNIGOLA'SA",
+      titular: "Ti guidxi sti' Guiba' Nisadó riunda'be'nda' ti guendaró ni gucaa lu neza, ti diidxa' sti' binni.",
+      sumario: "Binni ti guidxi zapoteca biiyubi ti guendaró ni gucaa ndaani' diidxa' sti' binni. Riunda'be'nda' ti información sti' autorida' ni gucaa lu diidxa' sti' guidxi ne biinda'be'nda' ti gucaa lu neza ne pa chelu ti guendaró.",
+      cuerpo: [
+        "Ti binni sti' ti guidxi zapoteca sti' Guiba' Nisadó biiyubi ti mensaje WhatsApp lu Monitor CIID, ti guendaró ni gucaa ndaani' diidxa' sti' binni, ti foto ne ti audio. Lu mensaje riunda'be'nda' ti guendaró ni gucaa lu neza ne pa chelu ti guendaró.",
+        "Guendaró ni gucaa, ni napa ti marca sti' información ciudadana, bizulú ti protocolo sti' verificación sti' ecosistema CIID. Guendaró ni gucaa ma' bi guni publicar automáticamente: bi napa contraste ndi' autorida' municipal ne dependencia ni napa cargo sti' obra, ne bi napa validación lingüística ndi' binni ni napa diidxa' sti' variante.",
+        "De acuerdo ndi' información ni bi napa, napa ti proyecto ni napa registro para rehabilitación sti' neza, pero guidxi ma' bi napa información lu diidxa' sti' binni. Guendaró ni gucaa riunda'be'nda' ti brecha sti' comunicación institucional, ma' ti ausencia sti' proyecto.",
+        "Audio original lu diidxa' sti' binnigola'sa bi napa preservado ti registro patrimonial vivo. Versión ni napa publicada napa sentido, contexto ne expresión comunitaria. Ma' ti traducción: ti versión ni napa validación ndi' binni ni napa diidxa'."
+      ],
+      firma: "Redacción Monitor Noticias · Validación lingüística: colaborador hablante de la variante local"
+    }
+  },
+  verificacion: [
+    { q: "¿Fuente ciudadana con consentimiento?", a: "Sí · registrado", estado: "ok" },
+    { q: "¿Se contrastó con autoridad?", a: "Sí · Ayuntamiento y dependencia", estado: "ok" },
+    { q: "¿Existe proyecto registrado?", a: "Sí · documento consultado", estado: "ok" },
+    { q: "¿Fecha de inicio confirmada?", a: "Pendiente · sin calendario oficial", estado: "warn" },
+    { q: "¿Validación lingüística?", a: "Hablante nativo · variante verificada", estado: "ok" },
+    { q: "¿Regla de oro respetada?", a: "Reporte NO se publicó sin contraste", estado: "ok" }
+  ],
+  formatos: {
+    "Nota en español": "Nota larga con contexto territorial, fotografía y datos verificados.",
+    "Versión en lengua originaria": "Nota completa en zapoteco (variante demo), validada por hablante nativo.",
+    "Audio": "🎧 Nota leída en lengua originaria (2:14).<br>Locución: colaborador comunitario.",
+    "Redes sociales": "🗣️ Una comunidad zapoteca nos envió un reporte en su lengua.<br>Su pregunta: ¿qué pasa con el camino?<br>Nuestra respuesta: verificación + validación lingüística.<br>#Oaxaca #LenguasOriginarias",
+    "Medio comunitario": "Formato adaptado para radiodifusora comunitaria. Guion de 3 minutos con inserción del audio original.",
+    "Archivo patrimonial": "Registro vivo: audio original + texto validado + contexto + territorio + hablante."
+  },
+  preservacion: {
+    "Territorio": "Sierra Norte · Oaxaca",
+    "Comunidad": "XXXXX (demo)",
+    "Lengua": "Zapoteco (variante demo)",
+    "Fecha": "2026",
+    "Contenido": "Información comunitaria + lengua",
+    "Audio original": "Preservado · audio_original.wav",
+    "Versión lingüística": "Preservada · validada por hablante",
+    "Validación": "Hablante nativo registrado",
+    "Fuente": "Ciudadanía / medio comunitario",
+    "Hash documental": "sha256:c4e1…88ab"
+  }
+};
+
+/* ============ LOG ============ */
+function makeLog(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return { push: () => {} };
+  return {
+    push(msg, cls = "ok") {
+      const t = new Date();
+      const ts = `${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}:${String(t.getSeconds()).padStart(2,"0")}`;
+      const line = document.createElement("div");
+      line.className = "line";
+      line.innerHTML = `<span class="ts">[${ts}]</span> <span class="${cls}">${msg}</span>`;
+      el.appendChild(line);
+      el.scrollTop = el.scrollHeight;
+    }
+  };
+}
+
+function renderPipeline(containerId, demo, onSelect, liveState) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = "";
+  ESTADOS.forEach((estado, i) => {
+    const div = document.createElement("div");
+    div.className = "step";
+    if (i < demo.estado) div.classList.add("done");
+    if (i === demo.estado) div.classList.add("active");
+    if (i > demo.estado) div.classList.add("pending");
+    if (liveState && i === demo.estado && liveState.running) div.classList.add("processing");
+    div.innerHTML = `<span class="dot"></span><span>${LABELS[estado]}</span>${liveState && i === demo.estado && liveState.running ? '<span class="spin"></span>' : ''}`;
+    div.onclick = () => onSelect(i);
+    el.appendChild(div);
+  });
+}
+
+function renderExpediente(id, obj) {
+  const el = document.getElementById(id);
+  el.innerHTML = Object.entries(obj).map(([k, v]) =>
+    `<div class="item"><div class="label">${k}</div><div>${v}</div></div>`
+  ).join("");
+}
+
+function badge(text, cls) { return `<span class="badge ${cls}">${text}</span>`; }
+function actor(icon, name) { return `<span class="actor">${icon} ${name}</span>`; }
+
+function typewriter(el, html, speed = 25) {
+  return new Promise(resolve => {
+    el.innerHTML = "";
+    el.classList.add("typing");
+    const temp = document.createElement("div");
+    temp.innerHTML = html;
+    const plain = temp.textContent;
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i >= plain.length) {
+        clearInterval(interval);
+        el.innerHTML = html;
+        el.classList.remove("typing");
+        resolve(); return;
+      }
+      el.textContent = plain.slice(0, i + 1);
+      i += 1;
+    }, Math.max(8, 40 - speed));
+  });
+}
+
+/* ============ DEMO 1 ============ */
+async function renderStageDemo1(i, liveState) {
+  const d = demo1;
+  document.getElementById("stage-title1").textContent = LABELS[ESTADOS[i]];
+  const body = document.getElementById("stage-body1");
+  const actions = document.getElementById("stage-actions1");
+  actions.innerHTML = "";
+  const estado = ESTADOS[i];
+  liveState.running = true;
+  renderPipeline("pipeline1", d, (idx) => { d.estado = idx; renderStageDemo1(idx, liveState); }, liveState);
+
+  if (estado === "RECEIVED") {
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${actor("📥","Ingesta CIID")}</div>
+      <p>${d.entrada}</p>
+      <div class="meta-row"><span class="k">Estado</span><span class="v">${badge("RECEIVED","info")}</span></div>
+      <div class="meta-row"><span class="k">Origen</span><span class="v">Comunicado institucional · Ayuntamiento</span></div>
+      <div class="meta-row"><span class="k">Canal</span><span class="v">Correo oficial</span></div>
+      <div class="meta-row"><span class="k">ID asignado</span><span class="v">CIID-2026-0001</span></div>
+      <div class="live-log" id="log1"></div>`;
+    const log = makeLog("log1");
+    log.push("Conexión establecida con buzón institucional", "info");
+    log.push("Documento recibido · tamaño 342 KB", "info");
+    log.push("Hash de origen calculado", "info");
+    log.push("Registro creado: CIID-2026-0001", "ok");
+    log.push("Esperando siguiente etapa…", "warn");
+    actions.innerHTML = `<button class="btn" onclick="avanzar(1)">Procesar →</button>`;
+  }
+  else if (estado === "PROCESSING") {
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${actor("🤖","Normalización automática")}</div>
+      <div class="meta-row"><span class="k">Municipio</span><span class="v">Oaxaca de Juárez</span></div>
+      <div class="meta-row"><span class="k">Estado</span><span class="v">Oaxaca</span></div>
+      <div class="meta-row"><span class="k">Tema</span><span class="v">Infraestructura / movilidad</span></div>
+      <div class="meta-row"><span class="k">Tipo</span><span class="v">Información institucional</span></div>
+      <div class="meta-row"><span class="k">Datos a comprobar</span><span class="v">${badge("3 detectados","warn")}</span></div>
+      <div class="live-log" id="log1"></div>`;
+    const log = makeLog("log1");
+    const lines = [
+      ["Normalizando texto y metadatos…", "info"],
+      ["Detectando entidades: Oaxaca de Juárez, Ayuntamiento", "info"],
+      ["Geolocalizando referencia territorial", "info"],
+      ["Detectando datos que requieren comprobación", "warn"],
+      ["Normalización completada", "ok"]
+    ];
+    for (const [m, c] of lines) { await new Promise(r => setTimeout(r, 480)); log.push(m, c); }
+    actions.innerHTML = `<button class="btn" onclick="avanzar(1)">Clasificar →</button>`;
+  }
+  else if (estado === "CLASSIFIED") {
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${actor("🧠","Motor de clasificación CIID")}</div>
+      <div id="clasif-render"></div>
+      <div class="live-log" id="log1"></div>`;
+    const target = document.getElementById("clasif-render");
+    const log = makeLog("log1");
+    log.push("Analizando categoría temática…", "info");
+    for (const [k, v] of Object.entries(d.clasificacion)) {
+      await new Promise(r => setTimeout(r, 300));
+      const row = document.createElement("div");
+      row.className = "meta-row";
+      row.innerHTML = `<span class="k">${k}</span><span class="v">${v}</span>`;
+      target.appendChild(row);
+      log.push(`Etiqueta asignada: ${k} → ${v}`, "ok");
+    }
+    log.push("Clasificación finalizada", "ok");
+    actions.innerHTML = `<button class="btn" onclick="avanzar(1)">Pasar a mesa editorial →</button>`;
+  }
+  else if (estado === "EDITORIAL_REVIEW") {
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${actor("🤖","Asistencia editorial CIID · generando borrador")}</div>
+      <div id="nota-render"></div>
+      <div class="live-log" id="log1"></div>`;
+    const log = makeLog("log1");
+    log.push("Modelo editorial invocado", "info");
+    log.push("Analizando contexto temático y territorial", "info");
+    const wrapper = document.createElement("div");
+    wrapper.className = "nota-generada";
+    wrapper.innerHTML = `<div class="kicker"></div><h3></h3><div class="sumario"></div><div class="cuerpo"></div><div class="firma"></div>`;
+    document.getElementById("nota-render").appendChild(wrapper);
+    wrapper.querySelector(".kicker").textContent = d.nota.kicker;
+    log.push("Kicker generado", "ok");
+    await new Promise(r => setTimeout(r, 320));
+    await typewriter(wrapper.querySelector("h3"), d.nota.titular, 28);
+    log.push("Titular generado", "ok");
+    await new Promise(r => setTimeout(r, 200));
+    await typewriter(wrapper.querySelector(".sumario"), d.nota.sumario, 28);
+    log.push("Sumario generado", "ok");
+    const cuerpo = wrapper.querySelector(".cuerpo");
+    for (let idx = 0; idx < d.nota.cuerpo.length; idx++) {
+      const p = document.createElement("p");
+      cuerpo.appendChild(p);
+      await typewriter(p, d.nota.cuerpo[idx], 22);
+      log.push(`Párrafo ${idx + 1}/${d.nota.cuerpo.length} generado`, "info");
+    }
+    wrapper.querySelector(".firma").textContent = d.nota.firma;
+    log.push("Borrador completo · pendiente de decisión humana", "warn");
+    actions.innerHTML = `<button class="btn" onclick="avanzar(1)">Enviar a verificación →</button>`;
+  }
+  else if (estado === "VERIFICATION") {
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${actor("🏛","Verificación con fuentes")}</div>
+      <div id="verif-render"></div>
+      <div class="live-log" id="log1"></div>`;
+    const target = document.getElementById("verif-render");
+    const log = makeLog("log1");
+    for (const v of d.verificacion) {
+      await new Promise(r => setTimeout(r, 480));
+      const row = document.createElement("div");
+      row.className = "meta-row";
+      row.innerHTML = `<span class="k">${v.q}</span><span class="v">${badge(v.a, v.estado)}</span>`;
+      target.appendChild(row);
+      log.push(`Comprobado: ${v.q} → ${v.a}`, v.estado === "ok" ? "ok" : "warn");
+    }
+    log.push("Expediente de verificación completo", "ok");
+    actions.innerHTML = `<button class="btn" onclick="avanzar(1)">Enviar a decisión →</button>`;
+  }
+  else if (estado === "DECISION") {
+    body.innerHTML = `
+      <p style="margin-bottom:6px;">El periodista revisa el expediente completo y decide.</p>
+      <div style="margin:12px 0;">${actor("🧑","Monitor Noticias · mesa editorial")}</div>
+      <div class="meta-row"><span class="k">Borrador</span><span class="v">${badge("Listo","ok")}</span></div>
+      <div class="meta-row"><span class="k">Verificación</span><span class="v">${badge("Completada","ok")}</span></div>
+      <div class="meta-row"><span class="k">Riesgo editorial</span><span class="v">${badge("Bajo","ok")}</span></div>
+      <div class="meta-row"><span class="k">Recomendación CIID</span><span class="v">Publicar</span></div>`;
+    actions.innerHTML = `
+      <button class="btn" onclick="decidir(1,'APROBAR')">✓ Aprobar y publicar</button>
+      <button class="btn secondary" onclick="decidir(1,'DEVOLVER')">↺ Devolver a edición</button>
+      <button class="btn danger" onclick="decidir(1,'RECHAZAR')">✕ Rechazar</button>`;
+  }
+  else if (estado === "PUBLISHED") {
+    const n = d.nota;
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${actor("🚀","Publicación multiformato")} ${badge("APPROVED","ok")}</div>
+
+      <h3 style="margin-top:4px; font-size:12px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase;">Card de portada para redes</h3>
+      <div class="media-card" style="margin-bottom:16px;">
+        <img src="assets/card-demo1.svg" alt="Card Demo 1"
+             onerror="this.src='assets/card-demo1.svg'">
+        <div class="media-caption">Card generado por CIID · Titular + logo MONITOR + sello de verificación · DEMO</div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <a class="btn secondary" href="assets/card-demo1.png" download style="text-decoration:none; display:inline-block;">⬇ Descargar card en PNG</a>
+        <a class="btn secondary" href="assets/card-demo1.svg" download style="text-decoration:none; display:inline-block;">⬇ Descargar card en SVG</a>
+      </div>
+
+      <div class="nota-generada">
+        <div class="kicker">${n.kicker}</div>
+        <h3>${n.titular}</h3>
+        <div class="sumario">${n.sumario}</div>
+        <div class="cuerpo">${n.cuerpo.map(p=>`<p>${p}</p>`).join("")}</div>
+        <div class="firma">${n.firma}</div>
+      </div>
+
+      <h3 style="margin-top:20px; font-size:12px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase;">Formatos generados</h3>
+      <div class="formatos-grid">
+        ${Object.entries(d.formatos).map(([k, v]) => `
+          <div class="formato-card">
+            <div class="head">📤 ${k}</div>
+            <div class="body">${v}</div>
+          </div>`).join("")}
+      </div>
+      <div class="live-log" id="log1"></div>`;
+    const log = makeLog("log1");
+    log.push("Card de portada generado con titular y logo MONITOR", "ok");
+    for (const canal of Object.keys(d.formatos)) {
+      await new Promise(r => setTimeout(r, 200));
+      log.push(`Empaquetado para ${canal}`, "ok");
+    }
+    log.push("Distribución completada", "ok");
+    actions.innerHTML = `<button class="btn" onclick="avanzar(1)">Preservar en archivo →</button>`;
+  }
+  else if (estado === "PRESERVED") {
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${actor("🗄","Archivo digital CIID")} ${badge("PRESERVED","ok")}</div>
+      <div id="preserv-render"></div>
+      <div class="live-log" id="log1"></div>`;
+    const target = document.getElementById("preserv-render");
+    const log = makeLog("log1");
+    for (const [k, v] of Object.entries(d.preservacion)) {
+      await new Promise(r => setTimeout(r, 340));
+      const row = document.createElement("div");
+      row.className = "meta-row";
+      row.innerHTML = `<span class="k">${k}</span><span class="v">${v}</span>`;
+      target.appendChild(row);
+      log.push(`Preservado: ${k}`, "ok");
+    }
+    log.push("Métricas registradas: alcance, interacciones, canal, territorio", "ok");
+    log.push("Expediente cerrado", "ok");
+    actions.innerHTML = `<button class="btn secondary" onclick="reiniciar(1)">Reiniciar demo</button>`;
+  }
+
+  liveState.running = false;
+  renderPipeline("pipeline1", d, (idx) => { d.estado = idx; renderStageDemo1(idx, liveState); }, liveState);
+}
+
+/* ============ DEMO 2 ============ */
+async function renderStageDemo2(i, liveState) {
+  const d = demo2;
+  document.getElementById("stage-title2").textContent = LABELS[ESTADOS[i]];
+  const body = document.getElementById("stage-body2");
+  const actions = document.getElementById("stage-actions2");
+  actions.innerHTML = "";
+  const estado = ESTADOS[i];
+  liveState.running = true;
+  renderPipeline("pipeline2", d, (idx) => { d.estado = idx; renderStageDemo2(idx, liveState); }, liveState);
+
+  if (estado === "RECEIVED") {
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${actor("📱","Ingesta ciudadana · WhatsApp")}</div>
+      <div class="audio-box">
+        <div class="audio-wave"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <audio id="audio-demo" src="assets/audio-demo.wav" preload="none"></audio>
+        <button class="btn secondary" style="margin:0; padding:6px 12px;" onclick="document.getElementById('audio-demo').play()">▶ Reproducir audio original</button>
+        <span>audio_original.wav · lengua originaria <em>(demo)</em></span>
+      </div>
+
+      <div style="margin-top:10px; padding:10px 12px; background:#0b0e13; border-left:3px solid var(--patrimonio); border-radius:6px; font-size:12px; color:var(--muted); font-style:italic;">
+        <div style="font-size:10px; letter-spacing:1.5px; color:var(--patrimonio); font-weight:700; margin-bottom:4px;">TRANSCRIPCIÓN (DEMO · LENGUA FICTICIA)</div>
+        "Tu'u naka xa'na' tu'u binni guendaró ni gucaa ndaani' guiiba'. Naduá ti guendaró ni gucaa lu yoo. Guirá' binni nuu lu guidxi."
+      </div>
+
+      <div style="margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div class="media-card"><img src="assets/foto-demo.svg" alt="Reporte ciudadano (demo)"><div class="media-caption">Fotografía enviada por ciudadanía · DEMO</div></div>
+        <div class="media-card"><img src="assets/comunidad-demo.svg" alt="Comunidad (demo)"><div class="media-caption">Contexto territorial · DEMO</div></div>
+      </div>
+
+      <p style="margin-top:14px;">${d.entrada}</p>
+      <div class="meta-row"><span class="k">Estado</span><span class="v">${badge("RECEIVED","info")}</span></div>
+      <div class="meta-row"><span class="k">Consentimiento</span><span class="v">${badge("Registrado","ok")}</span></div>
+      <div class="meta-row"><span class="k">Hash de origen</span><span class="v">sha256:c4e1…88ab</span></div>
+      <div class="live-log" id="log2"></div>`;
+    const log = makeLog("log2");
+    log.push("Mensaje entrante por WhatsApp Business API", "info");
+    log.push("Consentimiento informado verificado", "ok");
+    log.push("Audio, texto y fotografía registrados", "ok");
+    log.push("Transcripción fonética preliminar generada", "info");
+    log.push("Audio original marcado como patrimonio potencial", "patrimonio");
+    log.push("Esperando siguiente etapa…", "warn");
+    actions.innerHTML = `<button class="btn" onclick="avanzar(2)">Procesar →</button>`;
+  }
+  else if (estado === "PROCESSING") {
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${actor("🤖","Normalización · preservación de audio")}</div>
+      <div class="meta-row"><span class="k">Texto</span><span class="v">✓ Extraído</span></div>
+      <div class="meta-row"><span class="k">Fotografía</span><span class="v">✓ Analizada</span></div>
+      <div class="meta-row"><span class="k">Audio original</span><span class="v">${badge("Preservado","patrimonio")}</span></div>
+      <div class="live-log" id="log2"></div>`;
+    const log = makeLog("log2");
+    const lines = [
+      ["Extrayendo texto del mensaje", "info"],
+      ["Procesando audio sin eliminarlo", "info"],
+      ["Registro lingüístico original conservado", "patrimonio"],
+      ["Identificando posible variante lingüística", "info"],
+      ["Normalización completada", "ok"]
+    ];
+    for (const [m, c] of lines) { await new Promise(r => setTimeout(r, 480)); log.push(m, c); }
+    actions.innerHTML = `<button class="btn" onclick="avanzar(2)">Clasificar →</button>`;
+  }
+  else if (estado === "CLASSIFIED") {
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${actor("🧠","Clasificación con detección lingüística")}</div>
+      <div id="clasif-render"></div>
+      <div class="live-log" id="log2"></div>`;
+    const target = document.getElementById("clasif-render");
+    const log = makeLog("log2");
+    for (const [k, v] of Object.entries(d.clasificacion)) {
+      await new Promise(r => setTimeout(r, 360));
+      const row = document.createElement("div");
+      row.className = "meta-row";
+      row.innerHTML = `<span class="k">${k}</span><span class="v">${v}</span>`;
+      target.appendChild(row);
+      log.push(`Etiqueta: ${k} → ${v}`, "ok");
+    }
+    log.push("Nota marcada como sensible · requiere validación lingüística", "warn");
+    actions.innerHTML = `<button class="btn" onclick="avanzar(2)">Pasar a mesa editorial →</button>`;
+  }
+  else if (estado === "EDITORIAL_REVIEW") {
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${actor("🤖","Asistencia editorial CIID · generando borrador bilingüe")}</div>
+      <div id="nota-render"></div>
+      <div class="live-log" id="log2"></div>`;
+    const log = makeLog("log2");
+    log.push("Modelo editorial invocado · modo sensibilidad cultural", "info");
+    log.push("Generando versión en español…", "info");
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "nota-generada";
+    wrapper.innerHTML = `<div class="kicker"></div><h3></h3><div class="sumario"></div><div class="cuerpo"></div><div class="firma"></div>`;
+    document.getElementById("nota-render").appendChild(wrapper);
+    wrapper.querySelector(".kicker").textContent = d.nota.kicker;
+    log.push("Kicker generado", "ok");
+    await new Promise(r => setTimeout(r, 300));
+    await typewriter(wrapper.querySelector("h3"), d.nota.titular, 26);
+    log.push("Titular en español generado", "ok");
+    await new Promise(r => setTimeout(r, 200));
+    await typewriter(wrapper.querySelector(".sumario"), d.nota.sumario, 26);
+    log.push("Sumario en español generado", "ok");
+    const cuerpo = wrapper.querySelector(".cuerpo");
+    for (let idx = 0; idx < d.nota.cuerpo.length; idx++) {
+      const p = document.createElement("p");
+      cuerpo.appendChild(p);
+      await typewriter(p, d.nota.cuerpo[idx], 22);
+      log.push(`Párrafo ${idx + 1}/${d.nota.cuerpo.length} en español generado`, "info");
+    }
+    wrapper.querySelector(".firma").textContent = d.nota.firma;
+    log.push("Versión en español completa", "ok");
+
+    log.push("Generando versión en lengua originaria…", "patrimonio");
+    await new Promise(r => setTimeout(r, 500));
+
+    const wrapperL = document.createElement("div");
+    wrapperL.className = "nota-lengua";
+    wrapperL.innerHTML = `
+      <div class="lang-tag">${d.nota.lengua.nombre}</div>
+      <div class="kicker"></div>
+      <h3></h3>
+      <div class="sumario"></div>
+      <div class="cuerpo"></div>
+      <div class="firma"></div>
+      <div class="lang-aviso">
+        <strong>⚠ DEMO · LENGUA FICTICIA.</strong> ${d.nota.lengua.aviso}
+      </div>`;
+    document.getElementById("nota-render").appendChild(wrapperL);
+    wrapperL.querySelector(".kicker").textContent = d.nota.lengua.kicker;
+    log.push("Kicker en lengua generado", "patrimonio");
+    await new Promise(r => setTimeout(r, 300));
+    await typewriter(wrapperL.querySelector("h3"), d.nota.lengua.titular, 24);
+    log.push("Titular en lengua generado", "patrimonio");
+    await new Promise(r => setTimeout(r, 200));
+    await typewriter(wrapperL.querySelector(".sumario"), d.nota.lengua.sumario, 24);
+    log.push("Sumario en lengua generado", "patrimonio");
+    const cuerpoL = wrapperL.querySelector(".cuerpo");
+    for (let idx = 0; idx < d.nota.lengua.cuerpo.length; idx++) {
+      const p = document.createElement("p");
+      cuerpoL.appendChild(p);
+      await typewriter(p, d.nota.lengua.cuerpo[idx], 20);
+      log.push(`Párrafo ${idx + 1}/${d.nota.lengua.cuerpo.length} en lengua generado`, "patrimonio");
+    }
+    wrapperL.querySelector(".firma").textContent = d.nota.lengua.firma;
+    log.push("Versión en lengua completa", "patrimonio");
+    log.push("Pendiente: validación por hablante nativo", "warn");
+
+    actions.innerHTML = `<button class="btn" onclick="avanzar(2)">Enviar a verificación y validación →</button>`;
+  }
+  else if (estado === "VERIFICATION") {
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${actor("🏛","Verificación periodística")} ${actor("🗣","Validación lingüística")}</div>
+      <div style="background:rgba(210,153,34,.1); padding:10px; border-radius:6px; border-left:3px solid var(--warn); margin-bottom:12px;">
+        <strong>Regla de oro:</strong> el reporte ciudadano NO se convierte automáticamente en noticia.
+      </div>
+      <div id="verif-render"></div>
+      <div class="live-log" id="log2"></div>`;
+    const target = document.getElementById("verif-render");
+    const log = makeLog("log2");
+    log.push("Consultando autoridad municipal…", "info");
+    await new Promise(r => setTimeout(r, 520));
+    log.push("Respuesta: existe proyecto registrado", "ok");
+    log.push("Solicitando calendario oficial de obra…", "info");
+    await new Promise(r => setTimeout(r, 520));
+    log.push("Sin calendario confirmado", "warn");
+    log.push("Invocando colaborador hablante nativo…", "patrimonio");
+    await new Promise(r => setTimeout(r, 600));
+    log.push("Validación lingüística: sentido, variante y contexto confirmados", "patrimonio");
+    for (const v of d.verificacion) {
+      await new Promise(r => setTimeout(r, 360));
+      const row = document.createElement("div");
+      row.className = "meta-row";
+      row.innerHTML = `<span class="k">${v.q}</span><span class="v">${badge(v.a, v.estado)}</span>`;
+      target.appendChild(row);
+      log.push(`Comprobado: ${v.q}`, v.estado === "ok" ? "ok" : "warn");
+    }
+    log.push("Expediente bilingüe verificado", "ok");
+    actions.innerHTML = `<button class="btn" onclick="avanzar(2)">Enviar a decisión →</button>`;
+  }
+  else if (estado === "DECISION") {
+    body.innerHTML = `
+      <p>El periodista evalúa si hay elementos suficientes para publicar.</p>
+      <div style="margin:12px 0;">${actor("🧑","Monitor Noticias")}</div>
+      <div class="meta-row"><span class="k">Borrador bilingüe</span><span class="v">${badge("Listo","ok")}</span></div>
+      <div class="meta-row"><span class="k">Verificación</span><span class="v">${badge("Completada","ok")}</span></div>
+      <div class="meta-row"><span class="k">Validación lingüística</span><span class="v">${badge("Aprobada","patrimonio")}</span></div>
+      <div class="meta-row"><span class="k">Riesgo editorial</span><span class="v">${badge("Bajo","ok")}</span></div>`;
+    actions.innerHTML = `
+      <button class="btn" onclick="decidir(2,'APROBAR')">✓ Aprobar y publicar</button>
+      <button class="btn secondary" onclick="decidir(2,'DEVOLVER')">↺ Devolver a edición</button>
+      <button class="btn danger" onclick="decidir(2,'RECHAZAR')">✕ Rechazar</button>`;
+  }
+  else if (estado === "PUBLISHED") {
+    const n = d.nota;
+    const l = d.nota.lengua;
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${actor("🚀","Publicación multiformato")} ${badge("APPROVED","ok")} ${badge("VALIDACIÓN LINGÜÍSTICA","patrimonio")}</div>
+
+      <h3 style="margin-top:4px; font-size:12px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase;">Card de portada para redes</h3>
+      <div class="media-card" style="margin-bottom:16px;">
+        <img src="assets/card-demo2.svg" alt="Card Demo 2">
+        <div class="media-caption">Card bilingüe · Titular + logo MONITOR + sello de validación · DEMO</div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <a class="btn secondary" href="assets/card-demo2.png" download style="text-decoration:none; display:inline-block;">⬇ Descargar card en PNG</a>
+        <a class="btn secondary" href="assets/card-demo2.svg" download style="text-decoration:none; display:inline-block;">⬇ Descargar card en SVG</a>
+      </div>
+
+      <h3 style="margin-top:20px; font-size:12px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase;">Nota publicada · versión bilingüe</h3>
+      <div class="lang-toggle" id="lang-toggle">
+        <button class="active" data-lang="es">🇲🇽 Español</button>
+        <button data-lang="len">🗣 ${l.nombre}</button>
+        <button data-lang="both">⇄ Ver ambas</button>
+      </div>
+      <div id="nota-bilingue" class="bilingue-wrap"></div>
+
+      <h3 style="margin-top:20px; font-size:12px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase;">Formatos generados</h3>
+      <div class="formatos-grid">
+        ${Object.entries(d.formatos).map(([k, v]) => `
+          <div class="formato-card">
+            <div class="head">📤 ${k}</div>
+            <div class="body">${v}</div>
+          </div>`).join("")}
+      </div>
+      <div class="live-log" id="log2"></div>`;
+
+    const cont = document.getElementById("nota-bilingue");
+    const htmlES = `
+      <div class="nota-generada">
+        <div class="kicker">${n.kicker}</div>
+        <h3>${n.titular}</h3>
+        <div class="sumario">${n.sumario}</div>
+        <div class="cuerpo">${n.cuerpo.map(p=>`<p>${p}</p>`).join("")}</div>
+        <div class="firma">${n.firma}</div>
+      </div>`;
+    const htmlLen = `
+      <div class="nota-lengua">
+        <div class="lang-tag">${l.nombre}</div>
+        <div class="kicker">${l.kicker}</div>
+        <h3>${l.titular}</h3>
+        <div class="sumario">${l.sumario}</div>
+        <div class="cuerpo">${l.cuerpo.map(p=>`<p>${p}</p>`).join("")}</div>
+        <div class="firma">${l.firma}</div>
+        <div class="lang-aviso">
+          <strong>⚠ DEMO · LENGUA FICTICIA.</strong> ${l.aviso}
+        </div>
+      </div>`;
+    function pintar(modo) {
+      if (modo === "es") { cont.style.gridTemplateColumns = "1fr"; cont.innerHTML = htmlES; }
+      else if (modo === "len") { cont.style.gridTemplateColumns = "1fr"; cont.innerHTML = htmlLen; }
+      else { cont.style.gridTemplateColumns = "1fr 1fr"; cont.innerHTML = htmlES + htmlLen; }
+    }
+    pintar("es");
+    document.querySelectorAll("#lang-toggle button").forEach(b => {
+      b.onclick = () => {
+        document.querySelectorAll("#lang-toggle button").forEach(x => x.classList.remove("active"));
+        b.classList.add("active");
+        pintar(b.dataset.lang);
+      };
+    });
+
+    const log = makeLog("log2");
+    log.push("Card bilingüe generado con logo MONITOR", "ok");
+    for (const canal of Object.keys(d.formatos)) {
+      await new Promise(r => setTimeout(r, 200));
+      log.push(`Empaquetado para ${canal}`, canal.includes("lengua") || canal.includes("patrimonial") ? "patrimonio" : "ok");
+    }
+    log.push("Versión en español publicada", "ok");
+    log.push("Versión en lengua originaria publicada", "patrimonio");
+    log.push("Distribución completada", "ok");
+    actions.innerHTML = `<button class="btn" onclick="avanzar(2)">Preservar en archivo patrimonial →</button>`;
+  }
+  else if (estado === "PRESERVED") {
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${badge("ARCHIVO PATRIMONIAL VIVO","patrimonio")}</div>
+      <div id="preserv-render"></div>
+      <div class="live-log" id="log2"></div>`;
+    const target = document.getElementById("preserv-render");
+    const log = makeLog("log2");
+    for (const [k, v] of Object.entries(d.preservacion)) {
+      await new Promise(r => setTimeout(r, 300));
+      const row = document.createElement("div");
+      row.className = "meta-row";
+      row.innerHTML = `<span class="k">${k}</span><span class="v">${v}</span>`;
+      target.appendChild(row);
+      log.push(`Preservado: ${k}`, "patrimonio");
+    }
+    const media = document.createElement("div");
+    media.style.marginTop = "12px";
+    media.innerHTML = `
+      <div class="media-card">
+        <img src="assets/audio-thumb.svg" alt="Registro patrimonial">
+        <div class="media-caption">Registro patrimonial · audio_original.wav</div>
+      </div>`;
+    target.appendChild(media);
+
+    await new Promise(r => setTimeout(r, 400));
+    const l = d.nota.lengua;
+    const lenBox = document.createElement("div");
+    lenBox.style.marginTop = "16px";
+    lenBox.innerHTML = `
+      <div class="nota-lengua">
+        <div class="lang-tag">${l.nombre} · versión preservada</div>
+        <div class="kicker">${l.kicker}</div>
+        <h3>${l.titular}</h3>
+        <div class="sumario">${l.sumario}</div>
+        <div class="cuerpo">${l.cuerpo.map(p=>`<p>${p}</p>`).join("")}</div>
+        <div class="firma">${l.firma}</div>
+        <div class="lang-aviso">
+          <strong>⚠ DEMO · LENGUA FICTICIA.</strong> ${l.aviso}
+        </div>
+      </div>`;
+    target.appendChild(lenBox);
+    log.push("Versión lingüística preservada en el archivo", "patrimonio");
+    log.push("Información + memoria + territorio + lengua + patrimonio digital", "patrimonio");
+    log.push("Expediente cerrado", "ok");
+    actions.innerHTML = `<button class="btn secondary" onclick="reiniciar(2)">Reiniciar demo</button>`;
+  }
+
+  liveState.running = false;
+  renderPipeline("pipeline2", d, (idx) => { d.estado = idx; renderStageDemo2(idx, liveState); }, liveState);
+}
+
+/* ============ CONTROL ============ */
+const live1 = { running: false };
+const live2 = { running: false };
+
+function actualizar(n) {
+  if (n === 1) {
+    renderExpediente("expediente1", demo1.expediente);
+    renderStageDemo1(demo1.estado, live1);
+  } else {
+    renderExpediente("expediente2", demo2.expediente);
+    renderStageDemo2(demo2.estado, live2);
+  }
+}
+function avanzar(n) {
+  const d = n === 1 ? demo1 : demo2;
+  if (d.estado < ESTADOS.length - 1) d.estado++;
+  actualizar(n);
+}
+function decidir(n, accion) {
+  const d = n === 1 ? demo1 : demo2;
+  if (accion === "APROBAR") d.estado = ESTADOS.indexOf("PUBLISHED");
+  else if (accion === "DEVOLVER") d.estado = ESTADOS.indexOf("EDITORIAL_REVIEW");
+  else if (accion === "RECHAZAR") d.estado = ESTADOS.indexOf("RECEIVED");
+  actualizar(n);
+}
+function reiniciar(n) {
+  const d = n === 1 ? demo1 : demo2;
+  d.estado = 0;
+  actualizar(n);
+}
+
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    ["demo1","demo2","comparativa"].forEach(v => {
+      document.getElementById("view-" + v).style.display = "none";
+    });
+    document.getElementById("view-" + tab.dataset.view).style.display = "block";
+  };
+});
+
+const params = new URLSearchParams(location.search);
+const demoInicial = params.get("demo");
+if (demoInicial === "2") document.querySelector('.tab[data-view="demo2"]').click();
+else if (demoInicial === "comp") document.querySelector('.tab[data-view="comparativa"]').click();
+
+const audience = params.get("audience");
+if (audience) {
+  document.querySelector(".brand h1").innerHTML += ` <span style="color:var(--muted); font-weight:400; font-size:12px;">· ${audience}</span>`;
+}
+
+actualizar(1);
+actualizar(2);
+</script>
+
+</body>
+</html>

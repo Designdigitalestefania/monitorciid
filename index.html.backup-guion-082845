@@ -1553,70 +1553,14 @@ var audioActual = null;
 var ultimoPasoNarrado = -1;
 
 var GUION_PRESENTACION = [
-  {
-    estado: "RECEIVED",
-    espera: 22000,
-    mensaje: "1/8 · El origen",
-    accion: "Paso 1 · El origen",
-    texto: "Todo comienza con algo muy sencillo: una persona que tiene información y necesita ser escuchada. En este caso, una ciudadana comparte un reporte desde su comunidad. Puede enviar texto, una fotografía o incluso un audio en su propia lengua. Y desde ese momento, esa información entra a MONITOR CIID.",
-    pausa: "Reproduce el audio. Deja que suene. Es la voz de alguien que quiere ser escuchada."
-  },
-  {
-    estado: "PROCESSING",
-    espera: 20000,
-    mensaje: "2/8 · La información entra al ecosistema",
-    accion: "Paso 2 · La información entra al ecosistema",
-    texto: "CIID recibe la información, identifica su origen, registra el territorio y organiza los elementos que la acompañan. No se trata solamente de almacenar un mensaje. Se trata de convertir una información dispersa en un registro estructurado que pueda ser analizado, verificado y seguido durante todo su recorrido.",
-    pausa: "Señala la línea morada del log: el audio original se preserva, no se borra."
-  },
-  {
-    estado: "CLASSIFIED",
-    espera: 18000,
-    mensaje: "3/8 · Entender antes de publicar",
-    accion: "Paso 3 · Entender antes de publicar",
-    texto: "Ahora comienza el procesamiento. MONITOR CIID identifica el tema, el territorio, los actores involucrados y las características de la información. Pero hay una regla fundamental: recibir información no significa publicarla. Antes de convertirse en noticia, debe pasar por un proceso de análisis y contraste.",
-    pausa: "Deja que las etiquetas aparezcan una a una. La sensibilidad patrimonial es clave."
-  },
-  {
-    estado: "VERIFICATION",
-    espera: 24000,
-    mensaje: "4/8 · Verificar y contrastar",
-    accion: "Paso 4 · Verificar y contrastar",
-    texto: "En esta etapa, la información ciudadana se confronta con otras fuentes. Se buscan antecedentes, documentos, fuentes institucionales y referencias comunitarias. El objetivo no es publicar más rápido. El objetivo es publicar mejor. Porque la velocidad puede distribuir información, pero la verificación construye confianza.",
-    pausa: "Pausa dramática antes de: El objetivo no es publicar más rápido. El objetivo es publicar mejor."
-  },
-  {
-    estado: "EDITORIAL_REVIEW",
-    espera: 32000,
-    mensaje: "5/8 · Lengua, contexto y cultura",
-    accion: "Paso 5 · Lengua, contexto y cultura",
-    texto: "Y aquí aparece uno de los elementos que distingue a MONITOR CIID. Cuando la información llega en una lengua originaria, el proceso no consiste simplemente en traducir palabras. Se busca preservar significado, contexto, expresión, territorio y memoria. La validación con hablantes nativos permite que la información conserve aquello que una traducción literal puede perder: su sentido cultural.",
-    pausa: "Pausa. Deja que la versión en lengua se escriba completa. No interrumpas."
-  },
-  {
-    estado: "DECISION",
-    espera: 20000,
-    mensaje: "6/8 · La decisión periodística",
-    accion: "Paso 6 · La decisión periodística",
-    texto: "Después de recorrer este proceso, llega el momento más importante. La decisión. Es el periodista quien determina si la información está suficientemente sustentada para convertirse en contenido periodístico. CIID puede organizar, analizar, contrastar y asistir. Pero la decisión editorial permanece en manos humanas. La tecnología asiste. El periodista decide.",
-    pausa: "Pausa 2 segundos. Mira al público. Tú mismo presionas Aprobar y publicar."
-  },
-  {
-    estado: "PUBLISHED",
-    espera: 22000,
-    mensaje: "7/8 · De información a contenido y memoria",
-    accion: "Paso 7 · De información a contenido y memoria",
-    texto: "Una vez aprobada, la información puede convertirse en distintos formatos: una nota, contenido para redes, audio, una versión en lengua originaria o materiales para medios comunitarios. Pero el proceso no termina con la publicación. La información también puede preservarse. Porque una noticia puede ser algo más que un contenido de un día. Puede convertirse en registro de un territorio, de una lengua y de una comunidad.",
-    pausa: "Muestra el toggle Ver ambas. Deja que se vean las dos versiones lado a lado."
-  },
-  {
-    estado: "PRESERVED",
-    espera: 32000,
-    mensaje: "8/8 · Archivo patrimonial vivo",
-    accion: "Paso 8 · Archivo patrimonial vivo",
-    texto: "Y aquí llegamos al propósito más profundo de este recorrido. Lo que comenzó como un reporte ciudadano puede terminar convertido en información verificada, contenido periodístico y memoria digital. Cada registro puede conservar su territorio, su contexto, su lengua y su historia. Eso es un Archivo Patrimonial Vivo. Una infraestructura que no solamente procesa información para el presente. También ayuda a preservarla para el futuro. MONITOR CIID. Innovar para informar. Digitalizar para preservar. De Oaxaca para el mundo.",
-    pausa: "Después de esta línea: silencio. La demo entra en negro 5 segundos y aparece el overlay final."
-  }
+  { estado: "RECEIVED", espera: 12000, mensaje: "1/8 - Llega la denuncia ciudadana", accion: "Paso 1 - Ingesta ciudadana", texto: "Escuchen esto. Una persona de una comunidad de la Sierra Norte nos manda un audio en su lengua originaria, una fotografia y un texto. Su pregunta es simple: que esta pasando con el camino? Esto no llego a un correo perdido. Esto entro al ecosistema CIID.", pausa: "Reproduce el audio. Deja que suene 5 segundos." },
+  { estado: "PROCESSING", espera: 8000, mensaje: "2/8 - CIID recibe y estructura", accion: "Paso 2 - Normalizacion", texto: "El sistema no traduce. El sistema estructura. Extrae texto, preserva el audio tal cual llego, detecta la posible variante linguistica, y marca esto como patrimonio potencial. El audio nunca se borra.", pausa: "Senala la linea morada en el log." },
+  { estado: "CLASSIFIED", espera: 7000, mensaje: "3/8 - Territorio y lengua identificados", accion: "Paso 3 - Clasificacion", texto: "El sistema no solo dice esto es infraestructura. Dice territorio, tipo, lengua detectada, nivel de sensibilidad patrimonial, y un porcentaje de confianza.", pausa: "Deja que las etiquetas aparezcan una a una." },
+  { estado: "EDITORIAL_REVIEW", espera: 22000, mensaje: "4/8 - Asistencia editorial en vivo", accion: "Paso 4 - Generacion bilingue", texto: "Esto que estan viendo no es un copy-paste. El sistema esta generando un borrador completo: kicker, titular, sumario, cuerpo, firma. Y ahora viene lo que ningun otro sistema hace: la nota se genera tambien en la lengua originaria. No es una traduccion. Es una version paralela.", pausa: "Pausa dramatica. Cuando empiece a escribirse la version en lengua, guarda silencio." },
+  { estado: "VERIFICATION", espera: 14000, mensaje: "5/8 - Verificacion y validacion linguistica", accion: "Paso 5 - Verificacion", texto: "Aqui esta la regla de oro: el reporte ciudadano NO se convierte automaticamente en noticia. No se publica hasta que se contrasta con la autoridad, con documentos, y con otras fuentes. Y aqui aparece algo unico: entra un hablante nativo. No para traducir. Para validar sentido, contexto, variante y cosmovision.", pausa: "Habla despacio. Es tu argumento mas fuerte." },
+  { estado: "DECISION", espera: 8000, mensaje: "6/8 - Decision periodistica", accion: "Paso 6 - Decision humana", texto: "Aqui llega el periodista. No la inteligencia artificial. El sistema ya hizo todo el trabajo pesado. Pero el boton verde de Aprobar y publicar solo lo puede tocar un humano. La tecnologia asiste. El periodista decide.", pausa: "Pausa 2 segundos. Mira al publico." },
+  { estado: "PUBLISHED", espera: 12000, mensaje: "7/8 - Publicacion multiformato", accion: "Paso 7 - Publicacion", texto: "Una sola informacion. Miren cuantos formatos salen al mismo tiempo: card de portada, nota completa en espanol, nota completa en lengua originaria, audio, formato para radio comunitaria, archivo. La misma historia contada en dos idiomas, en paralelo.", pausa: "Toca el toggle Ver ambas para que se vean lado a lado." },
+  { estado: "PRESERVED", espera: 16000, mensaje: "8/8 - Archivo patrimonial vivo", accion: "Paso 8 - Preservacion", texto: "Y aqui esta el cierre. Esta informacion no desaparece despues de publicarse. No se borra. No se sobreescribe. Se convierte en memoria digital de una comunidad. Con su lengua, su territorio, su voz, su hablante que valido. Innovar para informar. Digitalizar para preservar.", pausa: "Cuando termine este paso, aparecera el overlay final." }
 ];
 
 function limpiarTimers() {
@@ -1696,13 +1640,7 @@ function terminarPresentacion() {
   detenerNarracion();
   document.getElementById("presentacionBar").classList.remove("activa");
   document.getElementById("guionPanel").classList.remove("activa");
-  // Pausa de silencio antes del overlay final
-  document.body.style.transition = "background-color 1.5s ease";
-  document.body.style.backgroundColor = "#000";
-  setTimeout(function() {
-    document.body.style.backgroundColor = "";
-    document.getElementById("impactoOverlay").classList.add("activa");
-  }, 5000);
+  document.getElementById("impactoOverlay").classList.add("activa");
 }
 
 function cerrarImpacto() {
